@@ -1,0 +1,19 @@
+#!/bin/bash
+#
+# Generates random number in a specified range. Example:
+# random number 1-10
+
+if [[ -z "$@" ]]; then
+	echo "^random number [0-9]+-[0-9]+$"
+elif [[ "$1" == "--dry-run" ]]; then
+	shift
+	echo "$@"
+else
+	BOUNDS="$(echo "$@" | sed -E 's/^random number ([0-9]+)-([0-9]+)$/\1 \2/g')"
+
+	MIN="$(echo $BOUNDS | cut -d' ' -f1)"
+	MAX="$(echo $BOUNDS | cut -d' ' -f2)"
+
+	awk -v min=5 -v max=10 "BEGIN{srand(); print int($MIN+rand()*($MAX-$MIN+1))}"
+fi
+
