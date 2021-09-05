@@ -28,7 +28,7 @@
 
 set -e
 
-if [[ -z "Q_SCRIPT_DIR" ]]; then
+if [[ -z "$Q_SCRIPT_DIR" ]]; then
 	Q_SCRIPT_DIR=~/.config/q.sh
 fi
 
