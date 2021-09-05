@@ -116,6 +116,7 @@ if [[ ! -z "$COMMAND" ]]; then
 			if [[ "$DRYRUN" == "1" ]]; then
 				"$Q_SCRIPT_DIR/$SCRIPTS" --dry-run "$COMMAND"
 			else
+				echo "$@" >> ~/.q_history
 				"$Q_SCRIPT_DIR/$SCRIPTS" "$COMMAND"
 			fi
 		else
