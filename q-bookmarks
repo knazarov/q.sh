@@ -1,0 +1,24 @@
+#!/bin/bash
+
+
+if [[ -z "$@" ]]; then
+	echo "^b .*$"
+elif [[ "$1" == "--hint" ]]; then
+	shift
+	if [[ -f ~/.bookmarks.txt ]]; then
+		cat ~/.bookmarks.txt | awk '{print $1 " b " $2}'
+	fi
+elif [[ "$1" == "--complete" ]]; then
+	shift
+	if [[ -f ~/.bookmarks.txt ]]; then
+		cat ~/.bookmarks.txt | awk '{print $1 " b " $2}'
+	fi
+elif [[ "$1" == "--preview" ]]; then
+	shift
+	echo "$1"
+elif [[ "$1" == "--run" ]]; then
+	shift
+	xdg-open "$1"
+else
+	echo "Unexpected arguments: $@"
+fi

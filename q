@@ -32,7 +32,10 @@ if [[ -z "$Q_SCRIPT_DIR" ]]; then
 	Q_SCRIPT_DIR=~/.config/q.sh
 fi
 
+SELF="$0"
+
 INDEX_FILE=~/.q.index
+HINT_FILE=~/.q.hints
 
 new_scripts_exist() {
 	if [[ ! -d "$Q_SCRIPT_DIR" ]]; then
@@ -70,6 +73,21 @@ rebuild_index() {
 	popd > /dev/null
 }
 
+rebuild_hints() {
+	if [[ ! -d "$Q_SCRIPT_DIR" ]]; then
+		return
+	fi
+
+	pushd "$Q_SCRIPT_DIR" >/dev/null
+	find . -type f -name 'q-*' | while read -r FN
+	do
+		FILENAME="$(echo "$FN" | sed 's/^\.\///g')"
+
+		"$Q_SCRIPT_DIR/$FILENAME" --hint
+	done
+	popd > /dev/null
+}
+
 get_scripts_for_cmd() {
 	if [[ ! -f "$INDEX_FILE" ]]; then
 		return
@@ -81,21 +99,94 @@ get_scripts_for_cmd() {
 	done
 }
 
+complete_command() {
+	COMMAND="$@"
+	SCRIPTS="$(get_scripts_for_cmd "$COMMAND")"
+	if [ -z "$SCRIPTS" ] || \
+	   [ "$(echo "$SCRIPTS" | wc -w)" -gt "1" ]; then
+		cat "$HINT_FILE"
+		exit 0
+	fi
+	"$Q_SCRIPT_DIR/$SCRIPTS" --complete "$@"
+}
+
+run_command() {
+	COMMAND="$@"
+	FIRST=${COMMAND%%" "*}
+	REST=${COMMAND#*" "}
+	SCRIPTS="$(get_scripts_for_cmd "$REST")"
+	if [ -z "$SCRIPTS" ] || \
+	   [ "$(echo "$SCRIPTS" | wc -w)" -gt "1" ]; then
+		echo "Scripts matched: $SCRIPTS"
+		exit 0
+	fi
+	"$Q_SCRIPT_DIR/$SCRIPTS" --run "$FIRST" "$REST"
+}
+
+run_command_cli() {
+	COMMAND="$@"
+	SCRIPTS="$(get_scripts_for_cmd "$COMMAND")"
+	if [ -z "$SCRIPTS" ] || \
+	   [ "$(echo "$SCRIPTS" | wc -w)" -gt "1" ]; then
+		echo "Scripts matched: $SCRIPTS"
+		exit 0
+	fi
+	"$Q_SCRIPT_DIR/$SCRIPTS" --cli "$COMMAND"
+}
+
+preview_command() {
+	COMMAND="$@"
+	FIRST=${COMMAND%%" "*}
+	REST=${COMMAND#*" "}
+	SCRIPTS="$(get_scripts_for_cmd "$REST")"
+	if [ -z "$SCRIPTS" ] || \
+	   [ "$(echo "$SCRIPTS" | wc -w)" -gt "1" ]; then
+		echo "Scripts matched: $SCRIPTS"
+		exit 0
+	fi
+	"$Q_SCRIPT_DIR/$SCRIPTS" --preview "$FIRST" "$REST"
+}
+
 if [[ ! -f "$INDEX_FILE" ]] || new_scripts_exist; then
 	rebuild_index > "$INDEX_FILE"
+	rebuild_hints > "$HINT_FILE"
 fi
 
-LIST=0
-if [[ "$1" == "--list" ]] || [[ "$1" == "-l" ]]; then
-	shift
-	LIST=1
-fi
+while (( "$#" )); do
+	case "$1" in
+		-c|--complete)
+			shift
+			complete_command "$@"
+			exit 0
+			;;
+		-r|--run)
+			shift
+			if [[ -z "$@" ]]; then
+				exit 0
+			fi
+			run_command "$@"
+			exit 0
+			;;
+		-p|--preview)
+			shift
+			if [[ -z "$@" ]]; then
+				exit 0
+			fi
+			preview_command "$@"
+			exit 0
+			;;
+		-u|--update)
+			shift
+			rebuild_index > "$INDEX_FILE"
+			rebuild_hints > "$HINT_FILE"
+			exit 0
+			;;
+		*)
+			break
+			;;
+	esac
+done
 
-DRYRUN=0
-if [[ "$1" == "--dry-run" ]] || [[ "$1" == "-d" ]]; then
-	shift
-	DRYRUN=1
-fi
 
 COMMAND="$@"
 
@@ -103,25 +194,15 @@ if [[ -z "$COMMAND" ]] && [[ ! -t 0 ]]; then
 	COMMAND="$(cat)"
 fi
 
-if [[ ! -z "$COMMAND" ]]; then
-	SCRIPTS="$(get_scripts_for_cmd "$COMMAND")"
-
-	if [[ "$LIST" == "1" ]]; then
-		echo "$SCRIPTS"
-	else
-		if [ "$(echo "$SCRIPTS" | wc -w)" -gt "1" ]; then
-			printf "Too many scripts matched:\n$SCRIPTS\n" 1>&2
-			exit 1
-		elif [[ ! -z "$SCRIPTS" ]]; then
-			if [[ "$DRYRUN" == "1" ]]; then
-				"$Q_SCRIPT_DIR/$SCRIPTS" --dry-run "$COMMAND"
-			else
-				echo "$@" >> ~/.q_history
-				"$Q_SCRIPT_DIR/$SCRIPTS" "$COMMAND"
-			fi
-		else
-			printf "No scripts matched:\n$SCRIPTS\n" 1>&2
-			exit 1
-		fi
-	fi
+if [[ -z "$COMMAND" ]]; then
+	PREF="$SELF -c"
+	INITIAL=""
+	FZF_DEFAULT_COMMAND="$PREF '$INITIAL'" fzf \
+		--bind "change:reload:$PREF {q} || true" \
+		--ansi --query "$INITIAL" \
+		--preview "$SELF -p {}" \
+		--with-nth="2..-1" \
+		--tiebreak=index | xargs -o "$SELF" -r
+else
+	run_command_cli "$COMMAND"
 fi
