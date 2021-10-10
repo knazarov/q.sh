@@ -12,7 +12,7 @@ if [[ -z "$@" ]]; then
 	echo "^= .*$"
 elif [[ "$1" == "--hint" ]]; then
 	shift
-	echo "= "
+	echo "- = "
 elif [[ "$1" == "--complete" ]]; then
 	shift
 	EXPR="$(echo "$@" | cut -d ' ' -f2-)"
