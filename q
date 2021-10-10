@@ -202,6 +202,7 @@ if [[ -z "$COMMAND" ]]; then
 		--ansi --query "$INITIAL" \
 		--preview "$SELF -p {}" \
 		--with-nth="2..-1" \
+		--preview-window wrap \
 		--tiebreak=index | xargs -o "$SELF" -r
 else
 	run_command_cli "$COMMAND"
