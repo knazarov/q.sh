@@ -1,0 +1,33 @@
+#!/bin/bash
+
+calc() {
+	res="$(echo "$1" | bc 2>/dev/null)"
+	if [ "$res" == "" ]; then
+		res="-"
+	fi
+	echo "$res"
+}
+
+if [[ -z "$@" ]]; then
+	echo "^= .*$"
+elif [[ "$1" == "--hint" ]]; then
+	shift
+	echo "= "
+elif [[ "$1" == "--complete" ]]; then
+	shift
+	EXPR="$(echo "$@" | cut -d ' ' -f2-)"
+	RES="$(calc "$EXPR")"
+	echo "$RES = $EXPR -> $(calc "$EXPR")"
+elif [[ "$1" == "--preview" ]]; then
+	shift
+	echo "$1"
+elif [[ "$1" == "--run" ]]; then
+	shift
+	echo "$1"
+	echo "$1" | (nohup wl-copy -n 2>/dev/null &)
+elif [[ "$1" == "--cli" ]]; then
+	shift
+	calc "$(echo "$@" | cut -d ' ' -f2-)"
+else
+	echo "Unexpected arguments: $@"
+fi
