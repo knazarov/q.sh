@@ -1,0 +1,26 @@
+#!/bin/bash
+
+
+if [[ -z "$@" ]]; then
+	echo "^c .*$"
+elif [[ "$1" == "--hint" ]]; then
+	shift
+	if [[ -f ~/.clipboard.txt ]]; then
+		cat ~/.clipboard.txt | tac
+	fi
+elif [[ "$1" == "--complete" ]]; then
+	shift
+	if [[ -f ~/.clipboard.txt ]]; then
+		cat ~/.clipboard.txt | tac
+	fi
+elif [[ "$1" == "--preview" ]]; then
+	shift
+	echo "$1" | base64 -d
+elif [[ "$1" == "--run" ]]; then
+	shift
+	TEXT="$(echo "$1" | base64 -d)"
+	echo "$TEXT"
+	echo -n "$TEXT" | (nohup wl-copy -n 2>/dev/null &)
+else
+	echo "Unexpected arguments: $@"
+fi
